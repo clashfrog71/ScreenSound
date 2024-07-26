@@ -1,11 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using ScreenSound.API.Endpoints;
 using ScreenSound.Banco;
-using ScreenSound.Modelos;
+using ScreenSound.Modelos;                                                                                                                      
+using ScreenSound.Shared.Dados.Modelos;
 using ScreenSound.Shared.Modelos.Modelos;
-using System.Data.SqlTypes;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,9 +13,13 @@ builder.Services.AddDbContext<ScreenSoundContext>((options) => {
             .UseSqlServer(builder.Configuration["ConnectionStrings:ScreenSoundDB"])
             .UseLazyLoadingProxies();
 });
+builder.Services.AddAuthorization();
 builder.Services.AddTransient<DAL<Artista>>();
 builder.Services.AddTransient<DAL<Musica>>();
 builder.Services.AddTransient<DAL<Genero>>();
+builder.Services
+    .AddIdentityApiEndpoints<PessoaComAcesso>()
+    .AddEntityFrameworkStores<ScreenSoundContext>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -35,17 +37,19 @@ builder.Services.AddCors(
             .AllowCredentials()));
 
 
-var app = builder.Build();
+var GroupBuilder = builder.Build();
 
-app.UseCors("wasm");
+GroupBuilder.UseCors("wasm");
 
-app.UseStaticFiles();
+GroupBuilder.UseStaticFiles();
+GroupBuilder.UseAuthorization();
 
-app.AddEndPointsArtistas();
-app.AddEndPointsMusicas();
-app.AddEndPointGeneros();
+GroupBuilder.MapGroup("autenticacao").MapIdentityApi<PessoaComAcesso>().WithTags("auto");
+GroupBuilder.AddEndPointsArtistas();
+GroupBuilder.AddEndPointsMusicas();
+GroupBuilder.AddEndPointGeneros();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+GroupBuilder.UseSwagger();
+GroupBuilder.UseSwaggerUI();
 
-app.Run();
+GroupBuilder.Run();
